@@ -1,7 +1,0 @@
-com/compiler/lexer/nfa/State.class
-com/compiler/lexer/NfaSimulator.class
-com/compiler/lexer/nfa/NFA.class
-com/compiler/Main.class
-com/compiler/lexer/nfa/Transition.class
-com/compiler/lexer/regex/RegexParser.class
-com/compiler/lexer/regex/ShuntingYard.class

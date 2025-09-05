@@ -1,7 +1,11 @@
 package com.compiler;
 
+import java.util.Map;
 import java.util.Set;
 
+import com.compiler.lexer.NfaToDfaConverter;
+import com.compiler.lexer.dfa.DFA;
+import com.compiler.lexer.dfa.DfaState;
 import com.compiler.lexer.nfa.NFA;
 import com.compiler.lexer.regex.RegexParser;
 /**
@@ -39,5 +43,30 @@ public class Main {
         RegexParser parser = new RegexParser();
         NFA nfa = parser.parse(regex);
         nfa.endState.isFinal = true;
+
+        // --- STEP 2: NFA -> DFA ---
+        DFA dfa = NfaToDfaConverter.convertNfaToDfa(nfa, alphabet);
+        System.out.println("--- Original DFA ---");
+        visualizeDfa(dfa);
+    }
+
+    public static void visualizeDfa(DFA dfa) {
+        System.out.println("Start State: D" + dfa.startState.id);
+        for (DfaState state : dfa.allStates) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("State D").append(state.id);
+            if (state.isFinal) {
+                sb.append(" (Final)");
+            }
+            sb.append(":");
+            // Sort transitions by character for consistent output
+            state.transitions.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .forEach(entry -> {
+                    sb.append("\n  --'").append(entry.getKey()).append("'--> D").append(entry.getValue().id);
+                });
+            System.out.println(sb.toString());
+        }
+        System.out.println("------------------------\n");
     }
 }

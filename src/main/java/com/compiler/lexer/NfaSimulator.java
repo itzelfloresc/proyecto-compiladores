@@ -70,7 +70,7 @@ public class NfaSimulator {
             
             for (State currentState : currentStates) {
                 for (Transition transition : currentState.transitions) {
-                    if (transition.symbol != null && transition.symbol == currentChar) {
+                    if (transition.symbol != null && transition.symbol.equals(currentChar)) {
                         addEpsilonClosure(transition.toState, nextStates);
                     }
                 }

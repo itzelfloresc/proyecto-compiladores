@@ -145,7 +145,7 @@ public class DfaState {
      * @return The set of NFA states.
      */
     public Set<State> getName() {
-        // This method is confusingly named and can be replaced by direct access to the public nfaStates field.
+        // TODO: Implement getName
         return nfaStates;
     }
 }

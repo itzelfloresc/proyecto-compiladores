@@ -85,7 +85,7 @@ public class State {
         // Pseudocode: Iterate over transitions, if symbol matches, add to result list
         List<State> result = new ArrayList<>();
         for(Transition transition : this.transitions) {
-            if(transition.symbol != null && transition.symbol.equals(symbol)){
+            if (transition.symbol != null && symbol == transition.symbol) {
                 result.add(transition.toState);
             }
         }

@@ -71,14 +71,14 @@ public class DfaState {
     @Override
     public boolean equals(Object obj) {
         // TODO: Implement equals
-        if(obj == null || this.getClass() != obj.getClass()) {
+        if (obj == null || this.getClass() != obj.getClass()) {
             return false;
         }
-        if(this == obj) {
+        if (this == obj) {
             return true;
         }
         DfaState dfaState = (DfaState) obj;
-        return Objects.equals(dfaState, obj);
+        return Objects.equals(this.nfaStates, dfaState.nfaStates);
     }
 
     /**

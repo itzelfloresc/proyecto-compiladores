@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.Queue;
 
 import com.compiler.lexer.dfa.DFA;
 import com.compiler.lexer.dfa.DfaState;
@@ -62,7 +63,19 @@ public class DfaMinimizer {
         7. Set start state and return minimized DFA
         */
         
-        List<DfaState> allStates = originalDfa.allStates;
+        // Encontrar todos los estados alcanzables desde el estado inicial
+        List<DfaState> allStates = new ArrayList<>();
+        Set<DfaState> visited = new HashSet<>();
+        Queue<DfaState> queue = new java.util.LinkedList<>();
+
+        queue.add(originalDfa.startState);
+        visited.add(originalDfa.startState);
+
+        while (!queue.isEmpty()) {
+            DfaState currentState = queue.poll();
+            allStates.add(currentState);
+            currentState.getTransitions().values().stream().filter(visited::add).forEach(queue::add);
+        }
             
         // 1. Inicializar tabla de pares de estados
         Map<Pair, Boolean> table = new HashMap<>();
@@ -87,26 +100,19 @@ public class DfaMinimizer {
                 for (DfaState s2 : allStates) {
                     if (s1.id < s2.id) {
                         Pair pair = new Pair(s1, s2);
-                        if (!table.get(pair)) { // Si no están marcados como distinguibles
-                                
+                        if (!table.get(pair)) { // Si no están marcados como distinguibles                            
                             // Verificar si sus transiciones llevan a estados distinguibles
                             for (char symbol : alphabet) {
                                 DfaState next1 = s1.getTransition(symbol);
                                 DfaState next2 = s2.getTransition(symbol);
-                                    
-                                if (next1 == null && next2 == null) {
-                                    // Ambos no tienen transición, continuar
-                                    continue;
-                                } else if (next1 == null || next2 == null) {
-                                    // Solo uno tiene transición, son distinguibles
+
+                                if ((next1 == null) != (next2 == null)) {
                                     table.put(pair, true);
                                     changed = true;
                                     break;
-                                } else if (next1.id != next2.id) {
-                                    // Tienen transiciones a estados diferentes
+                                } else if (next1 != null && next2 != null && !next1.equals(next2)) {
                                     Pair nextPair = new Pair(next1, next2);
-                                    if (table.getOrDefault(nextPair, false) || next1.isFinal() != next2.isFinal()) {
-                                        // Los estados destino son distinguibles o tienen finalidades diferentes
+                                    if (table.getOrDefault(nextPair, false)) {
                                         table.put(pair, true);
                                         changed = true;
                                         break;
@@ -128,7 +134,7 @@ public class DfaMinimizer {
             
         for (Set<DfaState> partition : partitions) {
             // Crear nuevo estado minimizado
-            DfaState minimizedState = new DfaState(partition.iterator().next().getName());
+            DfaState minimizedState = new DfaState();
                 
             // Marcar como final si algún estado original era final
             boolean isFinal = partition.stream().anyMatch(DfaState::isFinal);
@@ -285,16 +291,10 @@ public class DfaMinimizer {
              Pseudocode:
              Return true if both s1 and s2 ids match
             */
-            if(this == o) {
-                return true;
-            }
-            if(o == null || (this.getClass() != o.getClass())) {
-                return false;
-            }
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
             Pair pair = (Pair) o;
-            boolean s1_equals = Objects.equals(this.s1, pair.s1);
-            boolean s2_equals = Objects.equals(this.s2, pair.s2);
-            return (s1_equals && s2_equals);
+            return s1.id == pair.s1.id && s2.id == pair.s2.id;
         }
 
         @Override
@@ -304,7 +304,7 @@ public class DfaMinimizer {
              Pseudocode:
              Return hash of s1.id and s2.id
             */
-            return Objects.hash(this.s1, this.s2);
+            return Objects.hash(s1.id, s2.id);
         }
     }
 }

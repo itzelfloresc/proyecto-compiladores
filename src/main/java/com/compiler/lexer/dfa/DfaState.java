@@ -1,6 +1,7 @@
 package com.compiler.lexer.dfa;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -40,6 +41,16 @@ public class DfaState {
      * Map of input symbols to destination DFA states (transitions).
      */
     public final Map<Character, DfaState> transitions;
+
+    /**
+     * Constructs a new, empty DFA state for the minimization process.
+     */
+    public DfaState() {
+        this.id = nextId++;
+        this.nfaStates = new HashSet<>();
+        this.isFinal = false;
+        this.transitions = new HashMap<>();
+    }
 
     /**
      * Constructs a new DFA state.
@@ -134,7 +145,7 @@ public class DfaState {
      * @return The set of NFA states.
      */
     public Set<State> getName() {
-        // TODO: Implement getName
-        return this.nfaStates;
+        // This method is confusingly named and can be replaced by direct access to the public nfaStates field.
+        return nfaStates;
     }
 }

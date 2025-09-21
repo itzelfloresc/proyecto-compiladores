@@ -2,11 +2,12 @@ package com.compiler.lexer.nfa;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.compiler.lexer.token.Token;
 
 /**
  * Represents a state in a Non-deterministic Finite Automaton (NFA).
  * Each state has a unique identifier, a list of transitions to other states,
- * and a flag indicating whether it is a final (accepting) state.
+ * a flag indicating whether it is a final (accepting) state, and an optional token.
  *
  * <p>
  * Fields:
@@ -14,6 +15,7 @@ import java.util.List;
  *   <li>{@code id} - Unique identifier for the state.</li>
  *   <li>{@code transitions} - List of transitions from this state to others.</li>
  *   <li>{@code isFinal} - Indicates if this state is an accepting state.</li>
+ *   <li>{@code token} - The token associated with this state (if final).</li>
  * </ul>
  *
  *
@@ -39,6 +41,11 @@ public class State {
     public boolean isFinal;
 
     /**
+     * The token associated with this state (for final states in lexical analysis).
+     */
+    private Token token;
+
+    /**
      * Constructs a new state with a unique identifier and no transitions.
      * The state is not final by default.
      */
@@ -47,6 +54,7 @@ public class State {
         this.id = nextId++;
         this.transitions = new ArrayList<>();
         this.isFinal = false;
+        this.token = null;
     }
 
     /**
@@ -56,6 +64,25 @@ public class State {
     public boolean isFinal() {
         // TODO: Implement isFinal
         return this.isFinal;
+    }
+
+    /**
+     * Sets the token associated with this state.
+     * @param token The token to associate with this state.
+     */
+    public void setToken(Token token) {
+        this.token = token;
+        if (token != null) {
+            this.isFinal = true;
+        }
+    }
+
+    /**
+     * Gets the token associated with this state.
+     * @return The token, or null if no token is associated.
+     */
+    public Token getToken() {
+        return this.token;
     }
 
     /**
@@ -85,7 +112,7 @@ public class State {
         // Pseudocode: Iterate over transitions, if symbol matches, add to result list
         List<State> result = new ArrayList<>();
         for(Transition transition : this.transitions) {
-            if (transition.symbol != null && symbol == transition.symbol) {
+            if(transition.symbol != null && transition.symbol.equals(symbol)){
                 result.add(transition.toState);
             }
         }

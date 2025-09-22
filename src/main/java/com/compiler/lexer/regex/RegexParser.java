@@ -94,7 +94,9 @@ public class RegexParser {
             throw new IllegalStateException("Expresión postfija inválida, el stack contiene " + stack.size() + " elementos");
         }
 
-        return stack.pop();
+        NFA finalNfa = stack.pop();
+        finalNfa.endState.isFinal = true;
+        return finalNfa;
     }
 
     /**

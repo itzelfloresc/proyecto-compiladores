@@ -1,18 +1,20 @@
 package com.compiler.lexer.dfa;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
 import com.compiler.lexer.nfa.State;
+import com.compiler.lexer.token.Token;
 
 /**
  * DfaState
  * --------
  * Represents a single state in a Deterministic Finite Automaton (DFA).
  * Each DFA state corresponds to a set of states from the original NFA.
- * Provides methods for managing transitions, checking finality, and equality based on NFA state sets.
+ * Provides methods for managing transitions, checking finality, token association, and equality based on NFA state sets.
  */
 public class DfaState {
     /**
@@ -40,6 +42,25 @@ public class DfaState {
      * Map of input symbols to destination DFA states (transitions).
      */
     public final Map<Character, DfaState> transitions;
+    
+    /**
+     * The token associated with this DFA state (if final).
+     */
+    private Token token;
+
+    /**
+     * Constructs a new, empty DFA state for the minimization process.
+     */
+    public DfaState() {
+        this.id = nextId++;
+        this.nfaStates = new HashSet<>();
+        this.isFinal = false;
+        this.transitions = new HashMap<>();
+        this.token = null;
+        
+        // Check if any NFA state has a token and set it
+        updateTokenFromNfaStates();
+    }
 
     /**
      * Constructs a new DFA state.
@@ -51,6 +72,30 @@ public class DfaState {
         this.nfaStates = nfaStates;
         this.isFinal = false;
         this.transitions = new HashMap<>();
+        this.token = null;
+        
+        // Check if any NFA state has a token and set it
+        updateTokenFromNfaStates();
+    }
+
+    /**
+     * Updates the token based on the NFA states this DFA state represents.
+     * If multiple tokens are found, the one with the lowest ID takes precedence.
+     */
+    private void updateTokenFromNfaStates() {
+        Token selectedToken = null;
+        for (State nfaState : nfaStates) {
+            Token nfaToken = nfaState.getToken();
+            if (nfaToken != null) {
+                if (selectedToken == null || nfaToken.getId() < selectedToken.getId()) {
+                    selectedToken = nfaToken;
+                }
+            }
+        }
+        this.token = selectedToken;
+        if (this.token != null) {
+            this.isFinal = true;
+        }
     }
 
     /**
@@ -78,7 +123,7 @@ public class DfaState {
             return true;
         }
         DfaState dfaState = (DfaState) obj;
-        return Objects.equals(dfaState, obj);
+        return Objects.equals(this.nfaStates, dfaState.nfaStates);
     }
 
     /**
@@ -92,14 +137,15 @@ public class DfaState {
     }
     
     /**
-     * Returns a string representation of the DFA state, including its id and finality.
+     * Returns a string representation of the DFA state, including its id, finality, and token.
      * @return String representation of the state.
      */
     @Override
     public String toString() {
         // TODO: Implement toString
-        return ("DFA state = {id: " + this.id + ", isFinal: " + this.isFinal + ", nfaStates: (" + this.nfaStates + ")}");
-        }
+        return ("DFA state = {id: " + this.id + ", isFinal: " + this.isFinal + 
+                ", token: " + this.token + ", nfaStates: (" + this.nfaStates + ")}");
+    }
 
     /**
      * Sets the finality of the DFA state.
@@ -136,5 +182,21 @@ public class DfaState {
     public Set<State> getName() {
         // TODO: Implement getName
         return this.nfaStates;
+    }
+
+    /**
+     * Gets the token associated with this DFA state.
+     * @return The token, or null if no token is associated.
+     */
+    public Token getToken() {
+        return this.token;
+    }
+
+    /**
+     * Sets the token associated with this DFA state.
+     * @param token The token to associate with this state.
+     */
+    public void setToken(Token token) {
+        this.token = token;
     }
 }

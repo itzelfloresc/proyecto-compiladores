@@ -13,6 +13,7 @@ import com.compiler.lexer.dfa.DfaState;
 import com.compiler.lexer.nfa.NFA;
 import com.compiler.lexer.nfa.TokenizedNFA;
 import com.compiler.lexer.regex.TokenizedRegexParser;
+import com.compiler.lexer.token.LexicalToken;
 import com.compiler.lexer.token.Token;
 
 /**
@@ -51,7 +52,7 @@ public class MainToken {
         Token operatorToken = new Token(4, "OPERATOR");
         Token whitespaceToken = new Token(6, "WHITESPACE");
 
-        String keywordRegex = "if|while|for";
+        String keywordRegex = "if|while|for|true|false";
         String numberRegex = "(0|1|2|3|4|5|6|7|8|9)(0|1|2|3|4|5|6|7|8|9)*";
         String identifierRegex = "(a|b|c|d|e|f|g|h|i|j|k|l|n|o|q|r|t|u|v|w|x|y|z)((a|b|c|d|e|f|g|h|i|j|k|l|n|o|q|r|t|u|v|w|x|y|z)|(0|1|2|3|4|5|6|7|8|9))*";
         String operatorRegex = "p|m|s"; // p=plus, m=minus, s=star (avoiding operator symbols)
@@ -123,19 +124,23 @@ public class MainToken {
             "x",         // Should be IDENTIFIER
             "1 p 2",       //Should return three tokens
             "if x m 123", // Should return four tokens
+            "while x",
+            "if 123ab p 4" // Should show an error for "123ab"
         };
 
         System.out.println("=== Token Recognition Results ===");
         TokenizedDfaSimulator simulator = new TokenizedDfaSimulator();
         
         for (String testString : testStrings) {
-            List<Token> recognizedTokens = simulator.tokenize(dfa, testString);
+            List<LexicalToken> recognizedTokens = simulator.tokenize(dfa, testString);
             System.out.print("Input: '" + testString + "' -> ");
             if (!recognizedTokens.isEmpty()) {
-                for (Token token : recognizedTokens) {
-                    // In a real lexer, you'd often ignore whitespace tokens
-                    if (!token.getName().equals("WHITESPACE")) {
-                        System.out.print("[" + token.getName() + "] ");
+                for (LexicalToken token : recognizedTokens) {
+                    // The new tokenizer splits by whitespace, so we don't need to check for it here.
+                    if (token.getType() != null) {
+                        System.out.print("[" + token.getName() + ": '" + token.getLexeme() + "'] ");
+                    } else {
+                        System.out.print("[ERROR: '" + token.getLexeme() + "'] ");
                     }
                 }
                 System.out.println();

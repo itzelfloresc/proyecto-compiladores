@@ -4,6 +4,7 @@ import com.compiler.lexer.dfa.DFA;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.compiler.lexer.token.LexicalToken;
 import com.compiler.lexer.dfa.DfaState;
 import com.compiler.lexer.token.Token;
 
@@ -23,51 +24,32 @@ public class TokenizedDfaSimulator {
     }
 
     /**
-     * Scans an input string and breaks it down into a sequence of tokens.
-     * It uses the "maximal munch" principle, finding the longest possible valid token at each position.
+     * Scans an input string, splits it by whitespace, and tokenizes each part.
+     * If a part is not a valid token, it's marked as an error.
      *
      * @param dfa The DFA to use for token recognition.
      * @param input The input string to tokenize.
-     * @return A list of recognized tokens.
+     * @return A list of recognized lexical tokens (including errors).
      */
-    public List<Token> tokenize(DFA dfa, String input) {
-        List<Token> tokens = new ArrayList<>();
+    public List<LexicalToken> tokenize(DFA dfa, String input) {
+        List<LexicalToken> tokens = new ArrayList<>();
         if (dfa == null || input == null || input.isEmpty()) {
             return tokens;
         }
 
-        int currentIndex = 0;
-        while (currentIndex < input.length()) {
-            DfaState currentState = dfa.startState;
-            int lastAcceptedIndex = -1;
-            Token lastAcceptedToken = null;
+        // Split the input string by one or more whitespace characters
+        String[] words = input.trim().split("\\s+");
 
-            // Find the longest match from the current position
-            for (int i = currentIndex; i < input.length(); i++) {
-                char currentChar = input.charAt(i);
-                DfaState nextState = currentState.getTransition(currentChar);
-
-                if (nextState == null) {
-                    break; // No more transitions, stop searching for this token
-                }
-
-                currentState = nextState;
-
-                if (currentState.isFinal()) {
-                    lastAcceptedIndex = i;
-                    lastAcceptedToken = currentState.getToken();
-                }
+        for (String word : words) {
+            // After trim() and split(), an input of only whitespace can result in a single empty string.
+            if (word.isEmpty() && words.length == 1) {
+                continue;
             }
 
-            if (lastAcceptedToken != null) {
-                // We found a token
-                tokens.add(lastAcceptedToken);
-                currentIndex = lastAcceptedIndex + 1;
-            } else {
-                // No token recognized at the current position, skip the character and continue
-                // In a real compiler, you would report an error here.
-                currentIndex++;
-            }
+            if (word.isEmpty()) continue;
+            // Use simulateForToken to check if the entire word is a valid token
+            Token tokenType = simulateForToken(dfa, word);
+            tokens.add(new LexicalToken(tokenType, word));
         }
 
         return tokens;

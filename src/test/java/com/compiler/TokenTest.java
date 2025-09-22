@@ -19,6 +19,7 @@ import com.compiler.lexer.dfa.DFA;
 import com.compiler.lexer.nfa.NFA;
 import com.compiler.lexer.nfa.TokenizedNFA;
 import com.compiler.lexer.regex.TokenizedRegexParser;
+import com.compiler.lexer.token.LexicalToken;
 import com.compiler.lexer.token.Token;
 
 /**
@@ -33,6 +34,7 @@ public class TokenTest {
     private Token identifierToken;
     private Token operatorToken;
     private Token keywordToken;
+    private Token whitespaceToken;
 
     @BeforeEach
     void setUp() {
@@ -43,6 +45,7 @@ public class TokenTest {
         numberToken = new Token(2, "NUMBER");
         identifierToken = new Token(3, "IDENTIFIER"); 
         operatorToken = new Token(4, "OPERATOR");
+        whitespaceToken = new Token(5, "WHITESPACE");
 
         // Define alphabet
         alphabet = new HashSet<>();
@@ -52,12 +55,10 @@ public class TokenTest {
         }
         // Add lowercase letters (excluding p, m, s which are operators)
         for (char c = 'a'; c <= 'z'; c++) {
-            if (c != 'p' && c != 'm' && c != 's') {
-                alphabet.add(c);
-            }
+            alphabet.add(c);
         }
         // Add operators
-        alphabet.addAll(Arrays.asList('p', 'm', 's')); // p=plus, m=minus, s=star
+        alphabet.addAll(Arrays.asList('p', 'm', 's', ' ')); // p=plus, m=minus, s=star, space
     }
 
     @Test
@@ -102,17 +103,20 @@ public class TokenTest {
 
     @Test
     void testSingleTokenRecognition() {
-        TokenizedNFA numberNFA = parser.parseWithToken("1", numberToken);
+        TokenizedNFA numberNFA = parser.parseWithToken("(1)", numberToken);
         
         Set<Character> simpleAlphabet = Set.of('1');
         DFA dfa = TokenizedNfaToDfaConverter.convertNfaToDfaWithTokens(numberNFA, simpleAlphabet);
         
         TokenizedDfaSimulator simulator = new TokenizedDfaSimulator();
-        Token result = simulator.simulateForToken(dfa, "1");
+        List<LexicalToken> results = simulator.tokenize(dfa, "1");
         
-        assertNotNull(result);
-        assertEquals(numberToken.getId(), result.getId());
-        assertEquals(numberToken.getName(), result.getName());
+        assertNotNull(results);
+        assertEquals(1, results.size(), "Expected to find exactly one token");
+        LexicalToken firstToken = results.get(0);
+        assertEquals("1", firstToken.getLexeme());
+        assertEquals(numberToken.getId(), firstToken.getType().getId());
+        assertEquals(numberToken.getName(), firstToken.getName());
     }
 
     @ParameterizedTest
@@ -128,11 +132,12 @@ public class TokenTest {
         
         DFA dfa = TokenizedNfaToDfaConverter.convertNfaToDfaWithTokens(numberNFA, alphabet);
         TokenizedDfaSimulator simulator = new TokenizedDfaSimulator();
-        Token result = simulator.simulateForToken(dfa, input);
+        List<LexicalToken> results = simulator.tokenize(dfa, input);
         
-        assertNotNull(result);
-        assertEquals(expectedTokenName, result.getName());
-        assertEquals(expectedTokenId, result.getId());
+        assertNotNull(results);
+        assertEquals(1, results.size());
+        assertEquals(expectedTokenName, results.get(0).getName());
+        assertEquals(expectedTokenId, results.get(0).getType().getId());
     }
 
     @ParameterizedTest
@@ -143,16 +148,17 @@ public class TokenTest {
         "variable, IDENTIFIER, 3"
     })
     void testIdentifierTokenRecognition(String input, String expectedTokenName, int expectedTokenId) {
-        String identifierRegex = "(a|b|c|d|e|f|g|h|i|j|k|l|n|o|q|r|t|u|v|x|y|z)(a|b|c|d|e|f|g|h|i|j|k|l|n|o|q|r|t|u|v|x|y|z)*"; // Excludes p,m,s
+        String identifierRegex = "(a|b|c|d|e|f|g|h|i|j|k|l|n|o|q|r|t|u|v|w|x|y|z)(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z)*"; // Excludes p, m, s
         TokenizedNFA identifierNFA = parser.parseWithToken(identifierRegex, identifierToken);
         
         DFA dfa = TokenizedNfaToDfaConverter.convertNfaToDfaWithTokens(identifierNFA, alphabet);
         TokenizedDfaSimulator simulator = new TokenizedDfaSimulator();
-        Token result = simulator.simulateForToken(dfa, input);
+        List<LexicalToken> results = simulator.tokenize(dfa, input);
         
-        assertNotNull(result);
-        assertEquals(expectedTokenName, result.getName());
-        assertEquals(expectedTokenId, result.getId());
+        assertNotNull(results);
+        assertEquals(1, results.size());
+        assertEquals(expectedTokenName, results.get(0).getName());
+        assertEquals(expectedTokenId, results.get(0).getType().getId());
     }
 
     @Test
@@ -160,7 +166,7 @@ public class TokenTest {
         // Create multiple NFAs where "if" could match both KEYWORD and IDENTIFIER
         // KEYWORD has lower ID (1) so it should have priority over IDENTIFIER (3)
         
-        String identifierRegex = "(a|b|c|d|e|f|g|h|i|j|k|l|n|o|q|r|t|u|v|x|y|z)(a|b|c|d|e|f|g|h|i|j|k|l|n|o|q|r|t|u|v|x|y|z)*"; // Excludes p,m,s
+        String identifierRegex = "(a|b|c|d|e|f|g|h|i|j|k|l|n|o|q|r|t|u|v|w|x|y|z)(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z)*"; // Excludes p, m, s
         String keywordRegex = "if|while|for";
         
         TokenizedNFA identifierNFA = parser.parseWithToken(identifierRegex, identifierToken);
@@ -173,23 +179,25 @@ public class TokenTest {
         TokenizedDfaSimulator simulator = new TokenizedDfaSimulator();
         
         // Test "if" - should be recognized as KEYWORD (lower ID wins)
-        Token result = simulator.simulateForToken(dfa, "if");
-        assertNotNull(result);
-        assertEquals("KEYWORD", result.getName());
-        assertEquals(1, result.getId());
+        List<LexicalToken> results = simulator.tokenize(dfa, "if");
+        assertNotNull(results);
+        assertEquals(1, results.size());
+        assertEquals("KEYWORD", results.get(0).getName());
+        assertEquals(1, results.get(0).getType().getId());
         
         // Test "hello" - should be recognized as IDENTIFIER
-        result = simulator.simulateForToken(dfa, "hello");
-        assertNotNull(result);
-        assertEquals("IDENTIFIER", result.getName());
-        assertEquals(3, result.getId());
+        results = simulator.tokenize(dfa, "hello");
+        assertNotNull(results);
+        assertEquals(1, results.size());
+        assertEquals("IDENTIFIER", results.get(0).getName());
+        assertEquals(3, results.get(0).getType().getId());
     }
 
     @Test
     void testCompleteTokenizer() {
         // Create a complete tokenizer with numbers, identifiers, operators, and keywords
         String numberRegex = "(0|1|2|3|4|5|6|7|8|9)(0|1|2|3|4|5|6|7|8|9)*";
-        String identifierRegex = "(a|b|c|d|e|f|g|h|i|j|k|l|n|o|q|r|t|u|v|x|y|z)(a|b|c|d|e|f|g|h|i|j|k|l|n|o|q|r|t|u|v|x|y|z)*"; // Excludes p,m,s
+        String identifierRegex = "(a|b|c|d|e|f|g|h|i|j|k|l|n|o|q|r|t|u|v|w|x|y|z)(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z)*"; // Excludes p, m, s
         String operatorRegex = "p|m|s"; // p=plus, m=minus, s=star
         String keywordRegex = "if|while|for";
         
@@ -205,17 +213,80 @@ public class TokenTest {
         TokenizedDfaSimulator simulator = new TokenizedDfaSimulator();
         
         // Test various inputs
-        assertTokenEquals(simulator.simulateForToken(dfa, "123"), "NUMBER", 2);
-        assertTokenEquals(simulator.simulateForToken(dfa, "variable"), "IDENTIFIER", 3);
-        assertTokenEquals(simulator.simulateForToken(dfa, "p"), "OPERATOR", 4);
-        assertTokenEquals(simulator.simulateForToken(dfa, "if"), "KEYWORD", 1);
-        assertTokenEquals(simulator.simulateForToken(dfa, "while"), "KEYWORD", 1);
-        assertTokenEquals(simulator.simulateForToken(dfa, "m"), "OPERATOR", 4);
+        assertSingleToken(simulator.tokenize(dfa, "123"), "NUMBER", 2);
+        assertSingleToken(simulator.tokenize(dfa, "variable"), "IDENTIFIER", 3);
+        assertSingleToken(simulator.tokenize(dfa, "p"), "OPERATOR", 4);
+        assertSingleToken(simulator.tokenize(dfa, "if"), "KEYWORD", 1);
+        assertSingleToken(simulator.tokenize(dfa, "while"), "KEYWORD", 1);
+        assertSingleToken(simulator.tokenize(dfa, "m"), "OPERATOR", 4);
         
         // Test non-matching input
-        assertNull(simulator.simulateForToken(dfa, "12ab"));
-        assertNull(simulator.simulateForToken(dfa, ""));
-        assertNull(simulator.simulateForToken(dfa, "@"));
+        // The 'tokenize' method will find "12" and "ab" as separate tokens.
+        // To test if an entire string is invalid as a *single* token, we still use simulateForToken.
+        // This confirms that "12ab" is not a valid single number or identifier.
+        assertNull(new TokenizedDfaSimulator().simulateForToken(dfa, "12ab"));
+        assertTrue(simulator.tokenize(dfa, "").isEmpty());
+        
+        // For an invalid character, it should be tokenized as an error
+        List<LexicalToken> errorResult = simulator.tokenize(dfa, "@");
+        assertLexicalTokenEquals(errorResult.get(0), "ERROR", "@");
+    }
+
+    @Test
+    void testMultiTokenRecognition() {
+        // Create a complete tokenizer with numbers, identifiers, operators, keywords, and whitespace
+        String numberRegex = "(0|1|2|3|4|5|6|7|8|9)+";
+        String identifierRegex = "(a|b|c|d|e|f|g|h|i|j|k|l|n|o|q|r|t|u|v|w|x|y|z)(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z)*"; // Excludes p, m, s
+        String operatorRegex = "p|m|s";
+        String keywordRegex = "if|while|for";
+        String whitespaceRegex = " ";
+
+        TokenizedNFA keywordNFA = parser.parseWithToken(keywordRegex, keywordToken);
+        TokenizedNFA numberNFA = parser.parseWithToken(numberRegex, numberToken);
+        TokenizedNFA identifierNFA = parser.parseWithToken(identifierRegex, identifierToken);
+        TokenizedNFA operatorNFA = parser.parseWithToken(operatorRegex, operatorToken);
+        TokenizedNFA whitespaceNFA = parser.parseWithToken(whitespaceRegex, whitespaceToken);
+
+        List<TokenizedNFA> nfas = Arrays.asList(keywordNFA, numberNFA, identifierNFA, operatorNFA, whitespaceNFA);
+        NFA mergedNFA = NfaMerger.mergeTokenizedNfas(nfas);
+
+        DFA dfa = TokenizedNfaToDfaConverter.convertNfaToDfaWithTokens(mergedNFA, alphabet);
+        TokenizedDfaSimulator simulator = new TokenizedDfaSimulator();
+
+        // Test input with multiple tokens: "if x p 123"
+        // The new tokenizer splits by whitespace, so we expect 4 tokens.
+        List<LexicalToken> results = simulator.tokenize(dfa, "if x p 123");
+        assertNotNull(results);
+        assertEquals(4, results.size()); // "if", "x", "p", "123"
+        assertLexicalTokenEquals(results.get(0), "KEYWORD", "if");
+        assertLexicalTokenEquals(results.get(1), "IDENTIFIER", "x");
+        assertLexicalTokenEquals(results.get(2), "OPERATOR", "p");
+        assertLexicalTokenEquals(results.get(3), "NUMBER", "123");
+    }
+
+    @Test
+    void testLexicalErrorHandling() {
+        // Build a full DFA
+        String numberRegex = "(0|1|2|3|4|5|6|7|8|9)+";
+        String identifierRegex = "(a|b|c|d|e|f|g|h|i|j|k|l|n|o|q|r|t|u|v|w|x|y|z)(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z)*";
+        String operatorRegex = "p|m|s";
+        String keywordRegex = "if|while|for";
+
+        List<TokenizedNFA> nfas = Arrays.asList(
+            parser.parseWithToken(keywordRegex, keywordToken),
+            parser.parseWithToken(numberRegex, numberToken),
+            parser.parseWithToken(identifierRegex, identifierToken),
+            parser.parseWithToken(operatorRegex, operatorToken)
+        );
+        DFA dfa = TokenizedNfaToDfaConverter.convertNfaToDfaWithTokens(NfaMerger.mergeTokenizedNfas(nfas), alphabet);
+        TokenizedDfaSimulator simulator = new TokenizedDfaSimulator();
+
+        List<LexicalToken> results = simulator.tokenize(dfa, "if 123ab p 4");
+        assertEquals(4, results.size());
+        assertLexicalTokenEquals(results.get(0), "KEYWORD", "if");
+        assertLexicalTokenEquals(results.get(1), "ERROR", "123ab"); // This is the error token
+        assertLexicalTokenEquals(results.get(2), "OPERATOR", "p");
+        assertLexicalTokenEquals(results.get(3), "NUMBER", "4");
     }
 
     @Test
@@ -223,9 +294,7 @@ public class TokenTest {
         TokenizedNFA numberNFA = parser.parseWithToken("(0|1)(0|1)*", numberToken);
         DFA dfa = TokenizedNfaToDfaConverter.convertNfaToDfaWithTokens(numberNFA, alphabet);
         TokenizedDfaSimulator simulator = new TokenizedDfaSimulator();
-        
-        Token result = simulator.simulateForToken(dfa, "");
-        assertNull(result);
+        assertTrue(simulator.tokenize(dfa, "").isEmpty());
     }
 
     @Test 
@@ -233,17 +302,23 @@ public class TokenTest {
         TokenizedNFA numberNFA = parser.parseWithToken("(0|1)(0|1)*", numberToken);
         DFA dfa = TokenizedNfaToDfaConverter.convertNfaToDfaWithTokens(numberNFA, Set.of('0', '1'));
         TokenizedDfaSimulator simulator = new TokenizedDfaSimulator();
-        
-        Token result = simulator.simulateForToken(dfa, "abc");
-        assertNull(result);
+        // "abc" is not in the alphabet, so it should be tokenized as an error
+        List<LexicalToken> results = simulator.tokenize(dfa, "abc");
+        assertEquals(1, results.size());
+        assertLexicalTokenEquals(results.get(0), "ERROR", "abc");
     }
 
-    /**
-     * Helper method to assert token properties.
-     */
-    private void assertTokenEquals(Token actual, String expectedName, int expectedId) {
-        assertNotNull(actual, "Expected token but got null");
+    private void assertSingleToken(List<LexicalToken> actual, String expectedName, int expectedId) {
+        assertNotNull(actual, "Expected token list but was null");
+        assertEquals(1, actual.size(), "Expected exactly one token");
+        LexicalToken lexicalToken = actual.get(0);
+        assertEquals(expectedName, lexicalToken.getName());
+        assertEquals(expectedId, lexicalToken.getType().getId());
+    }
+
+    private void assertLexicalTokenEquals(LexicalToken actual, String expectedName, String expectedLexeme) {
+        assertNotNull(actual, "Expected lexical token but was null");
         assertEquals(expectedName, actual.getName());
-        assertEquals(expectedId, actual.getId());
+        assertEquals(expectedLexeme, actual.getLexeme());
     }
 }
